@@ -3,10 +3,12 @@ kind: FlinkDeployment
 metadata:
   name: recommendation-app
 spec:
-  image: quay.io/streamshub/flink-sql-runner:latest
+  image: quay.io/streamshub/flink-sql-runner:v0.0.1
   flinkVersion: v1_19
   flinkConfiguration:
     taskmanager.numberOfTaskSlots: "1"
+    metrics.reporters: prom
+    metrics.reporter.prom.factory.class: org.apache.flink.metrics.prometheus.PrometheusReporterFactory
   serviceAccount: flink
   podTemplate:
     kind: Pod
@@ -15,15 +17,13 @@ spec:
     spec:
       containers:
         - name: flink-main-container
-          image: quay.io/streamshub/flink-sql-runner:latest
           imagePullPolicy: Always
+          ports:
+            - containerPort: 9249
+              name: prom
           volumeMounts:
             - name: product-inventory-vol
               mountPath: /opt/flink/data
-            - mountPath: /opt/flink/log
-              name: flink-logs
-            - mountPath: /opt/flink/artifacts
-              name: flink-artifacts
       volumes:
         - name: product-inventory-vol
           configMap:
@@ -31,10 +31,6 @@ spec:
             items:
               - key: productInventory.csv
                 path: productInventory.csv
-        - emptyDir: {}
-          name: flink-logs
-        - emptyDir: {}
-          name: flink-artifacts
   jobManager:
     resource:
       memory: "2048m"
